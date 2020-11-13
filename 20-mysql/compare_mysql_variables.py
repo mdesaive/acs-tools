@@ -25,9 +25,11 @@ def prepare_arguments():
         Examples:
 
         Compare two files
-            ./compare_mysql_variables.py --new-settings <filename> \
-                    --template-settings <filename>
-
+            ./compare_mysql_variables.py \
+                -n <some newly created list of settings> \
+                -t template-deb-8-default-5_5.txt \
+                -a annotations.csv \
+                -o /tmp/config-delta.csv 
         Additional Infos:
           To prepare a list of settingns for the new setup use:
             mysqld --version --help
