@@ -1,0 +1,22 @@
+DB Key for Param;Param in MySQL Config;Units for Value,Annotation
+basedir;basedir;
+bind-address;bind-address;;Testannotation
+expire-logs-days;expire_logs_days;;bla
+general-log-file;general_log_file;
+innodb-data-file-path;innodb_data_file_path;
+innodb-file-per-table;innodb_file_per_table;
+key-buffer-size;key_buffer;Byte
+log-error;log-error;
+log-slow-queries;log_slow_queries;
+max-allowed-packet;max_allowed_packet;Byte
+max-binlog-size;max_binlog_size;Byte
+max-heap-table-size;max_heap_table_size;Byte
+max-long-data-size;;Byte
+myisam-recover-options;myisam-recover;
+pid-file;pid-file;
+query-cache-size;query_cache_size;Byte
+server-id;server_id;
+slow-query-log-file;;
+thread-cache-size;thread_cache_size;Byte
+thread-stack;thread_stack;Byte
+tmp-table-size;tmp_table_size;Byte
