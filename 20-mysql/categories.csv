@@ -1,0 +1,23 @@
+DB Key for Param;Param in MySQL Config;Units for Value;Category
+basedir;basedir;;OK
+bind-address;bind-address;;Network setting
+expire-logs-days;expire_logs_days;;Default Log Settings
+general-log-file;general_log_file;;Default Log settings
+innodb-data-file-path;innodb_data_file_path;;Individual Tuning
+innodb-file-per-table;innodb_file_per_table;;Individual Tuning
+key-buffer-size;key_buffer;Byte;Individual Tuning
+log;;;Default Log Settings
+log-error;log-error;;Default Log Settings
+log-slow-queries;log_slow_queries;;Default Log Settings
+max-allowed-packet;max_allowed_packet;Byte;Individual Tuning
+max-binlog-size;max_binlog_size;Byte;Individual Tuning
+max-heap-table-size;max_heap_table_size;Byte;Individual Tuning
+max-long-data-size;;Byte;Individual Tuning
+myisam-recover-options;myisam-recover;;MyISAM Settings
+pid-file;pid-file;;OK
+query-cache-size;query_cache_size;Byte;Individual Tuning
+server-id;server_id;;Cluster Setup
+slow-query-log-file;;;Default Log Settings
+thread-cache-size;thread_cache_size;Byte;Individual Tuning
+thread-stack;thread_stack;Byte;Individual Tuning
+tmp-table-size;tmp_table_size;Byte;Individual Tuning

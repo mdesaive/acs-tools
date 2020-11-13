@@ -28,8 +28,8 @@ def prepare_arguments():
             ./compare_mysql_variables.py \
                 -n <some newly created list of settings> \
                 -t template-deb-8-default-5_5.txt \
-                -a annotations.csv \
-                -o /tmp/config-delta.csv 
+                -a categories.csv \
+                -o /tmp/config-delta.csv
         Additional Infos:
           To prepare a list of settingns for the new setup use:
             mysqld --version --help
@@ -38,8 +38,8 @@ def prepare_arguments():
           Some sets of vanillasettings are provided in the files:
             mysql-variables-*.
 
-        A file with annotation, mappings to units and MySQL cnf parameter
-        names may be supplied. An example can be found in <annotations.csv>.
+        A file with category, mappings to units and MySQL cnf parameter
+        names may be supplied. An example can be found in <categories.csv>.
 
         Files with settings of unconfigured/vanilla installation are provided
         in:
@@ -69,9 +69,9 @@ def prepare_arguments():
         required=False)
 
     parser.add_argument(
-        '-a', '--annotations',
-        dest='annotations',
-        help='Read file with annotations.',
+        '-a', '--categories',
+        dest='categories',
+        help='Read file with categories.',
         required=False)
     args = parser.parse_args()
 
@@ -98,24 +98,24 @@ def read_variable_set(filename_variable_set):
     return dataset_variables
 
 
-def prepare_annotations(filename_annotations):
-    """Add annotations to dict with differences."""
-    dict_annotations = {}
-    if filename_annotations:
-        with open(filename_annotations) as file_annotations:
-            for line in file_annotations:
-                list_annotations = line.split(';')
-                dict_annotations[list_annotations[0]] = {
-                    "cnf_param_name": list_annotations[1], }
-                if len(list_annotations) > 2:
-                    dict_annotations[
-                        list_annotations[0]][
-                            "unit"] = list_annotations[2].strip('\n')
-                if len(list_annotations) > 3:
-                    dict_annotations[
-                        list_annotations[0]][
-                            "annotation"] = list_annotations[3].strip('\n')
-    return dict_annotations
+def prepare_categories(filename_categories):
+    """Add categories to dict with differences."""
+    dict_categories = {}
+    if filename_categories:
+        with open(filename_categories) as file_categories:
+            for line in file_categories:
+                list_categories = line.split(';')
+                dict_categories[list_categories[0]] = {
+                    "cnf_param_name": list_categories[1], }
+                if len(list_categories) > 2:
+                    dict_categories[
+                        list_categories[0]][
+                            "unit"] = list_categories[2].strip('\n')
+                if len(list_categories) > 3:
+                    dict_categories[
+                        list_categories[0]][
+                            "category"] = list_categories[3].strip('\n')
+    return dict_categories
 
 
 def compare_variable_sets(
@@ -130,54 +130,55 @@ def compare_variable_sets(
     keys_new = new_dataset_keys.difference(template_dataset_keys)
     keys_lost = template_dataset_keys.difference(new_dataset_keys)
 
-    differences = {}
+    differences = []
     for key in keys_intersection:
         if template_dataset[key]["value"] != new_dataset[key]["value"]:
-            differences[key] = {
+            differences = differences + [{
+                "key": key,
                 "value_template": template_dataset[key]["value"],
-                "value_new": new_dataset[key]["value"]}
+                "value_new": new_dataset[key]["value"]}, ]
     for key in keys_new:
-        differences[key] = {
+        differences = differences + [{
             "value_template": "setting not provided",
-            "value_new": new_dataset[key]["value"]}
+            "value_new": new_dataset[key]["value"]}, ]
     for key in keys_lost:
-        differences[key] = {
+        differences = differences + [{
             "value_template": template_dataset[key]["value"],
-            "value_new": "setting not provided"}
+            "value_new": "setting not provided"}, ]
 
     return differences
 
 
-def merge_annotations(differences, dict_annotations):
-    """Merges the annotations into the list of differences"""
-    if dict_annotations:
-        for key in differences:
-            if key in dict_annotations:
-                differences[key][
-                    "cnf_param_name"] = dict_annotations[key]["cnf_param_name"]
-                for field in ["unit", "annotation"]:
-                    if field in dict_annotations[key]:
-                        differences[key][field] = dict_annotations[key][field]
+def merge_categories(differences, dict_categories):
+    """Merges the categories into the list of differences"""
+    differences_annotated = []
+    if dict_categories:
+        for item in differences:
+            if item["key"] in dict_categories:
+                item["cnf_param_name"] = dict_categories[item["key"]]["cnf_param_name"]
+                for field in ["unit", "category"]:
+                    if field in dict_categories[item["key"]]:
+                        item[field] = dict_categories[item["key"]][field]
                     else:
-                        differences[key][field] = ""
+                        item[field] = ""
             else:
-                for field in ["cnf_param_name", "unit", "annotation"]:
-                    differences[key][field] = ""
+                for field in ["cnf_param_name", "unit", "category"]:
+                    item[field] = ""
+            differences_annotated = differences_annotated + [item, ]
 
-    return differences
+    return differences_annotated
 
 
 def print_differences(outputfile, differences):
     """Printout the differences as CSV."""
     # pprint.pprint(differences)
     outputfile.write(
-        'Setting;CNF Param Name;New Value;Template Value;Unit;Annotation\n')
-    for key, value in sorted(differences.items()):
+        'Category;Setting;CNF Param Name;New Value;Template Value;Unit\n')
+    for item in sorted(differences, key=lambda i: (i["category"], i["key"])):
         outputfile.write((
-            f'{key};{value["cnf_param_name"]};'
-            f'{value["value_new"]};'
-            f'{value["value_template"]};{value["unit"]};'
-            f'{value["annotation"]}\n'))
+            f'{item["category"]};{item["key"]};{item["cnf_param_name"]};'
+            f'{item["value_new"]};'
+            f'{item["value_template"]};{item["unit"]}\n'))
 
 
 def main():
@@ -196,12 +197,13 @@ def main():
         new_dataset,
         template_dataset)
 
-    if args.annotations:
-        dict_annotations = prepare_annotations(args.annotations)
+    if args.categories:
+        dict_categories = prepare_categories(args.categories)
+    # pprint.pprint(dict_categories)
 
-    differences = merge_annotations(differences, dict_annotations)
+    differences_annotated = merge_categories(differences, dict_categories)
 
-    print_differences(outputfile, differences)
+    print_differences(outputfile, differences_annotated)
 
     if args.name_outputfile is not None:
         outputfile.close()
