@@ -69,7 +69,7 @@ def prepare_arguments():
         required=False)
 
     parser.add_argument(
-        '-a', '--categories',
+        '-c', '--categories',
         dest='categories',
         help='Read file with categories.',
         required=False)
