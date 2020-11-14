@@ -21,3 +21,8 @@ slow-query-log-file;;;Default Log Settings
 thread-cache-size;thread_cache_size;Byte;Individual Tuning
 thread-stack;thread_stack;Byte;Individual Tuning
 tmp-table-size;tmp_table_size;Byte;Individual Tuning
+log-bin;;;Default Log Settings
+log-bin-index;;;Default Log Settings
+relay-log;;;Default Log Settings
+relay-log-index;;;Default Log Settings
+

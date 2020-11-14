@@ -104,17 +104,18 @@ def prepare_categories(filename_categories):
     if filename_categories:
         with open(filename_categories) as file_categories:
             for line in file_categories:
-                list_categories = line.split(';')
-                dict_categories[list_categories[0]] = {
-                    "cnf_param_name": list_categories[1], }
-                if len(list_categories) > 2:
-                    dict_categories[
-                        list_categories[0]][
-                            "unit"] = list_categories[2].strip('\n')
-                if len(list_categories) > 3:
-                    dict_categories[
-                        list_categories[0]][
-                            "category"] = list_categories[3].strip('\n')
+                if line != '\n':
+                    list_categories = line.split(';')
+                    dict_categories[list_categories[0]] = {
+                        "cnf_param_name": list_categories[1], }
+                    if len(list_categories) > 2:
+                        dict_categories[
+                            list_categories[0]][
+                                "unit"] = list_categories[2].strip('\n')
+                    if len(list_categories) > 3:
+                        dict_categories[
+                            list_categories[0]][
+                                "category"] = list_categories[3].strip('\n')
     return dict_categories
 
 
@@ -189,17 +190,16 @@ def main():
         outputfile = open(args.name_outputfile, 'w')
     else:
         outputfile = sys.stdout
-
+  
     template_dataset = read_variable_set(args.template_settings)
+
     new_dataset = read_variable_set(args.new_settings)
 
     differences = compare_variable_sets(
         new_dataset,
         template_dataset)
-
     if args.categories:
         dict_categories = prepare_categories(args.categories)
-    # pprint.pprint(dict_categories)
 
     differences_annotated = merge_categories(differences, dict_categories)
 
