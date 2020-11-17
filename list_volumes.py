@@ -3,7 +3,7 @@
 """ List CloudStack Volumes. """
 
 import sys
-import pprint
+# import pprint
 import argparse
 import textwrap
 from cs import CloudStack, read_config
@@ -98,7 +98,6 @@ def filter_volumes(all_volumes, args):
     """ Filter set of volumes according to commandline parameters."""
     filtered_volumes = all_volumes.copy()
 
-    pprint.pprint(filtered_volumes)
     if args.project:
         filtered_volumes = filter(
             lambda d: d["project"] == args.project, filtered_volumes)
