@@ -3,7 +3,7 @@
 """ List CloudStack Volumes. """
 
 import sys
-# import pprint
+import pprint
 import argparse
 import textwrap
 from cs import CloudStack, read_config
@@ -29,6 +29,8 @@ def prepare_arguments():
         List all isos in some storage:
             ./list_volumes.py --storage "Test von Melanie (Mauerpark)"
 
+        List all volumes that are currently not attached to a VM
+             ./list_volumes.py --only-detached
 
         Additional Infos:
 
@@ -55,6 +57,12 @@ def prepare_arguments():
     parser.add_argument(
         '-o', '--outputfile',
         dest='name_outputfile',
+        help='Write output to file.',
+        required=False)
+    parser.add_argument(
+        '--only-detached',
+        dest='only_detached',
+        action='store_true',
         help='Write output to file.',
         required=False)
     args = parser.parse_args()
@@ -90,12 +98,16 @@ def filter_volumes(all_volumes, args):
     """ Filter set of volumes according to commandline parameters."""
     filtered_volumes = all_volumes.copy()
 
+    pprint.pprint(filtered_volumes)
     if args.project:
         filtered_volumes = filter(
             lambda d: d["project"] == args.project, filtered_volumes)
     if args.storage:
         filtered_volumes = filter(
             lambda d: d["storage"] == args.storage, filtered_volumes)
+    if args.only_detached:
+        filtered_volumes = filter(
+            lambda d: d["vmname"] == 'n.a.', filtered_volumes)
 
     return filtered_volumes
 
