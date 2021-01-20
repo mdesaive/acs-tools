@@ -163,7 +163,8 @@ def print_vms(filtered_vms, args, outputfile):
             if number_nics > max_nics:
                 max_nics = number_nics
 
-    output_string = 'Domain;Project;Name;State;Hostname;CPUs;RAM [GB]'
+    output_string = (
+            'Domain;Project;Name;Instancename;State;Hostname;CPUs;RAM [GB]')
     if args.with_total_volumes:
         output_string = output_string + ';Volumes Total [GB];Volumes Count'
     if args.with_networks:
@@ -177,8 +178,10 @@ def print_vms(filtered_vms, args, outputfile):
             i["project"],
             i["name"])):
         output_string = (
-            f'{vm["domain"]};{vm["project"]};{vm["name"]};{vm["state"]};'
-            f'{vm["hostname"]};{vm["cpunumber"]};{int(vm["memory"]/1024)}')
+            f'{vm["domain"]};{vm["project"]};{vm["name"]};'
+            f'{vm["instancename"]};{vm["state"]};'
+            f'{vm["hostname"]};'
+            f'{vm["cpunumber"]};{float(round(vm["memory"]/1024,1))}')
         if args.with_total_volumes:
             output_string = (
                 output_string +
