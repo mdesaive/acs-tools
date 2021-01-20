@@ -78,6 +78,8 @@ def collect_systemvms(projectid="", projectname=""):
                 "project": projectname,
                 "type": my_systemvm["systemvmtype"],
                 "router_guestnetworkname": 'n.a',
+                "router_isredundantrouter": 'n.a.',
+                "router_redundantstate": 'n.a.',
                 "state": my_systemvm["state"],
                 "name": my_systemvm["name"],
                 "hostname": my_systemvm["hostname"],
@@ -98,6 +100,7 @@ def collect_routers(projectid="", projectname=""):
     if routers_container != {}:
         routers = routers_container["router"]
         for router in routers:
+            # pprint.pprint(router)
             if router["state"] != "Running":
                 router_hostname = "n.a."
                 router_linklocalip = "n.a."
@@ -114,7 +117,9 @@ def collect_routers(projectid="", projectname=""):
                 "state": router["state"],
                 "name": router["name"],
                 "hostname": router_hostname,
-                "linklocalip": router_linklocalip}, ]
+                "linklocalip": router_linklocalip,
+                "router_isredundantrouter": router["isredundantrouter"],
+                "router_redundantstate": router["redundantstate"]}]
     return tmp_routers
 
 
@@ -141,14 +146,18 @@ for project in sorted(projects, key=lambda key: key["name"]):
 #         i["project"], i["name"])))
 
 outputfile.write(
-    'Projekt;System-VM Type;Networkname for VR;State;Name;Hostname;'
+    'Projekt;System-VM Type;Networkname for VR;Is Redundant for Router;'
+    'Redundant State of Router; State;Name;Hostname;'
     'Linklocal IP\n')
 
 for systemvm in sorted(all_systemvms, key=lambda i: (
         i["project"], i["type"], i["router_guestnetworkname"])):
     outputfile.write(
         f'{systemvm["project"]};{systemvm["type"]};'
-        f'{systemvm["router_guestnetworkname"]};{systemvm["state"]};'
+        f'{systemvm["router_guestnetworkname"]};'
+        f'{systemvm["router_isredundantrouter"]};'
+        f'{systemvm["router_redundantstate"]};'
+        f'{systemvm["state"]};'
         f'{systemvm["name"]};{systemvm["hostname"]};'
         f'{systemvm["linklocalip"]}\n')
 if args.name_outputfile is not None:
