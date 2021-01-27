@@ -117,7 +117,8 @@ def print_volume_snapshots(projectid=""):
                 "vm_or_vol_snappy": 'Volume Snapshot',
                 "snapshot_state": snapshot["state"],
                 "created": snapshot["created"],
-                "physicalsize": snapshot["physicalsize"],
+                "virtualsize_gb": round(snapshot["virtualsize"]/1024**3, 2),
+                "physicalsize_gb": round(snapshot["physicalsize"]/1024**3, 2),
                 "intervaltype": snapshot["intervaltype"],
                 "revertable": snapshot["revertable"],
                 "snapshottype": snapshot["snapshottype"],
@@ -154,6 +155,7 @@ def print_vm_snapshots(projectid=""):
             if vmsnapshots_container != {}:
                 vmsnapshots = vmsnapshots_container["vmSnapshot"]
                 for vmsnapshot in vmsnapshots:
+                    # pprint.pprint(vmsnapshot)
 
                     tags_string = ''
                     for tag in vmsnapshot["tags"]:
@@ -173,6 +175,8 @@ def print_vm_snapshots(projectid=""):
                         "vm_or_vol_snappy": 'VM Snapshot',
                         "snapshot_state": vmsnapshot["state"],
                         "created": vmsnapshot["created"],
+                        "virtualsize_gb": vmsnapshot["physicalsize"]/1024,
+                        "physicalsize_gb": vmsnapshot["physicalsize"]/1024,
                         "tags": tags_string})]
     return tmp_snapshots
 
@@ -215,7 +219,8 @@ if not args.only_volume_snapshots:
 
 outputfile.write(
     'Domain;Projekt;VM Name;Volumename;Snapshot Name;'
-    'VM or Volume Snapshot;State;Created;Physical Size;Intervaltype;'
+    'VM or Volume Snapshot;State;Created;Virtual Size GB;'
+    'Physical Size GB;Intervaltype;'
     'Revertable;Type;Tags\n')
 # pprint.pprint(all_snapshots)
 # pylint: disable=redefined-outer-name
@@ -228,7 +233,8 @@ for snapshot in sorted(all_snapshots, key=lambda i: (
             f'{snapshot["volname"]};{snapshot["snapshot_name"]};'
             f'{snapshot["vm_or_vol_snappy"]};'
             f'{snapshot["snapshot_state"]};{snapshot["created"]};'
-            f'{snapshot["physicalsize"]};{snapshot["intervaltype"]};'
+            f'{snapshot["virtualsize_gb"]};{snapshot["physicalsize_gb"]};'
+            f'{snapshot["intervaltype"]};'
             f'{snapshot["revertable"]};{snapshot["snapshottype"]};'
             f'{snapshot["tags"]}\n')
     else:
