@@ -96,14 +96,21 @@ def collect_templates(list_templatefilter, projectid=""):
         if templates_container != {}:
             templates = templates_container["template"]
             for template in templates:
+                # pprint.pprint(template)
                 for key in ["project", "size", "bootable"]:
                     if key not in template:
                         template[key] = "n.a."
+
+                tags_string = ''
+                for tag in template["tags"]:
+                    tags_string = tags_string + f'{tag["key"]}={tag["value"]} '
+
                 temp_templates = temp_templates + [{
                     "id": template["id"],
                     "domain": template["domain"],
                     "project": template["project"],
                     "name": template["name"],
+                    "displaytext": template["displaytext"],
                     "used_filter": loop_templatefilter,
                     "status": template["status"],
                     "size": template["size"],
@@ -116,7 +123,8 @@ def collect_templates(list_templatefilter, projectid=""):
                     "isextractable": template["isextractable"],
                     "ispublic": template["ispublic"],
                     "isready": template["isready"],
-                    "passwordenabled": template["passwordenabled"]}, ]
+                    "passwordenabled": template["passwordenabled"],
+                    "tags": tags_string}, ]
     return temp_templates
 
 
@@ -125,7 +133,7 @@ if args.name_outputfile is not None:
 else:
     outputfile = sys.stdout
 
-if args.templatefilter is not None:
+if args.templatefilter is not None and args.templatefilter != "all":
     templatefilter = args.templatefilter.split(',')
     # pprint.pprint(templatefilter)
 else:
@@ -168,14 +176,16 @@ for loop_template in sorted(all_templates, key=lambda i: (
     last_id = loop_template["id"]
 
 outputfile.write(
-    'Domain;Project;Name;Templatetype;Status;Size;Hypervisor;OSTypename;'
+    'Domain;Project;Name;Displaytext;Templatetype;'
+    'Status;Size;Hypervisor;OSTypename;'
     'Format;Bootable;isDynamicallyScalable;isExtractable;isPublic;isReady;'
-    'Passwordenabled\n')
+    'Passwordenabled;Tags\n')
 for loop_template in sorted(templates_condensed, key=lambda i: (
         i["domain"], i["project"], i["name"])):
     outputfile.write(
         f'{loop_template["domain"]};{loop_template["project"]};'
-        f'{loop_template["name"]};{loop_template["used_filter"]};'
+        f'{loop_template["name"]};{loop_template["displaytext"]};'
+        f'{loop_template["used_filter"]};'
         f'{loop_template["status"]};'
         f'{loop_template["size"]};{loop_template["hypervisor"]};'
         f'{loop_template["ostypename"]};'
@@ -183,6 +193,6 @@ for loop_template in sorted(templates_condensed, key=lambda i: (
         f'{loop_template["isdynamicallyscalable"]};'
         f'{loop_template["isextractable"]};'
         f'{loop_template["ispublic"]};{loop_template["isready"]};'
-        f'{loop_template["passwordenabled"]}\n')
+        f'{loop_template["passwordenabled"]};{loop_template["tags"]}\n')
 if args.name_outputfile is not None:
     outputfile.close()
