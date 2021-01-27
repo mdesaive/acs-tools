@@ -74,9 +74,11 @@ def collect_systemvms(projectid="", projectname=""):
     if systemvms_container != {}:
         systemvms = systemvms_container["systemvm"]
         for my_systemvm in systemvms:
+            # pprint.pprint(my_systemvm)
             tmp_systemvms = tmp_systemvms + [{
                 "project": projectname,
                 "type": my_systemvm["systemvmtype"],
+                "ipaddress": my_systemvm["publicip"],
                 "router_guestnetworkname": 'n.a',
                 "router_isredundantrouter": 'n.a.',
                 "router_redundantstate": 'n.a.',
@@ -118,6 +120,7 @@ def collect_routers(projectid="", projectname=""):
                 "name": router["name"],
                 "hostname": router_hostname,
                 "linklocalip": router_linklocalip,
+                "ipaddress": router["nic"][0]["ipaddress"],
                 "router_isredundantrouter": router["isredundantrouter"],
                 "router_redundantstate": router["redundantstate"]}]
     return tmp_routers
@@ -148,7 +151,7 @@ for project in sorted(projects, key=lambda key: key["name"]):
 outputfile.write(
     'Projekt;System-VM Type;Networkname for VR;Is Redundant for Router;'
     'Redundant State of Router; State;Name;Hostname;'
-    'Linklocal IP\n')
+    'Public IP;Linklocal IP\n')
 
 for systemvm in sorted(all_systemvms, key=lambda i: (
         i["project"], i["type"], i["router_guestnetworkname"])):
@@ -159,6 +162,7 @@ for systemvm in sorted(all_systemvms, key=lambda i: (
         f'{systemvm["router_redundantstate"]};'
         f'{systemvm["state"]};'
         f'{systemvm["name"]};{systemvm["hostname"]};'
+        # f'{systemvm["ipaddress"]};'
         f'{systemvm["linklocalip"]}\n')
 if args.name_outputfile is not None:
     outputfile.close()
