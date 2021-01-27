@@ -26,18 +26,6 @@ def prepare_arguments():
         List all isos in some project:
             ./list_isos.py --project "Test von Melanie (Mauerpark)"
 
-        List only isolated isos:
-            ./list_isos.py --only-isolated-isos
-
-        List only shared isos:
-            ./list_isos.py --only-shared-isos
-
-        List only redundant isos:
-            ./list_isos.py --only-redundant-vr
-
-        List only not-redundant isos:
-            ./list_isos.py --only-not-redundant-vr
-
         Additional Infos:
 
         Uses the "CS" CloudStack API Client.
@@ -94,6 +82,14 @@ def collect_isos(cloudstack, projectid=""):
             for key in ["project", "projectid"]:
                 if key not in my_isos:
                     my_isos[key] = "n.a."
+
+            tags_string = ''
+            for tag in my_isos["tags"]:
+                tags_string = (
+                        tags_string +
+                        f'{tag["key"]}=\"{tag["value"]}\"')
+            my_isos["tags_string"] = tags_string
+
             if my_isos["domain"] == "ROOT":
                 my_isos["domain"] = " ROOT"
 
@@ -138,7 +134,8 @@ def print_isos(filtered_isos, outputfile):
 
     output_string = (
         'Domain;Project;Name;Displaytext;OS Type;Status;Size;' +
-        'Bootable;Dynamically Scalable;Extractable;Featured;Public;Ready\n')
+        'Bootable;Dynamically Scalable;Extractable;Featured;' +
+        'Public;Ready;Tags\n')
     outputfile.write(output_string)
 
     for isos in sorted(filtered_isos, key=lambda i: (
@@ -151,7 +148,7 @@ def print_isos(filtered_isos, outputfile):
             f'{isos["status"]};{isos["size"]};'
             f'{isos["bootable"]};{isos["isdynamicallyscalable"]};'
             f'{isos["isextractable"]};{isos["isfeatured"]};{isos["ispublic"]};'
-            f'{isos["isready"]};')
+            f'{isos["isready"]};{isos["tags_string"]}')
         outputfile.write(f'{output_string}\n')
 
 
