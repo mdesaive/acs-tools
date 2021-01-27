@@ -226,7 +226,7 @@ outputfile.write(
 # pylint: disable=redefined-outer-name
 for snapshot in sorted(all_snapshots, key=lambda i: (
         i["domain"].lower(), i["project"].lower(),
-        i["vmname"].lower(), i["created"])):
+        i["vmname"].lower(), i["volname"].lower(), i["created"])):
     if snapshot["vm_or_vol_snappy"] == 'Volume Snapshot':
         outputfile.write(
             f'{snapshot["domain"]};{snapshot["project"]};{snapshot["vmname"]};'
