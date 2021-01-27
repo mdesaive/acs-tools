@@ -93,11 +93,21 @@ def print_volume_snapshots(projectid=""):
                 volume = volumes[0]
                 volume_name = volume["name"]
                 # volume_virtualmachineid = volume["virtualmachineid"]
-                volume_virtualmachinename = volume["vmname"]
+                if "vmname" in volume:
+                    volume_virtualmachinename = volume["vmname"]
+                else:
+                    volume_virtualmachinename = "n.a."
             else:
                 volume_name = "n.a."
                 # volume_virtualmachineid = "n.a."
                 volume_virtualmachinename = "n.a."
+
+            tags_string = ''
+            for tag in snapshot["tags"]:
+                tags_string = tags_string + f'{tag["key"]}=\"{tag["value"]}\" '
+            # if tags_string != "":
+            #     print(tags_string)
+
             tmp_snapshots = tmp_snapshots + [({
                 "domain": snapshot["domain"],
                 "project": snapshot_project,
@@ -110,7 +120,8 @@ def print_volume_snapshots(projectid=""):
                 "physicalsize": snapshot["physicalsize"],
                 "intervaltype": snapshot["intervaltype"],
                 "revertable": snapshot["revertable"],
-                "snapshottype": snapshot["snapshottype"]}), ]
+                "snapshottype": snapshot["snapshottype"],
+                "tags": tags_string}), ]
     return tmp_snapshots
 
 
@@ -143,6 +154,16 @@ def print_vm_snapshots(projectid=""):
             if vmsnapshots_container != {}:
                 vmsnapshots = vmsnapshots_container["vmSnapshot"]
                 for vmsnapshot in vmsnapshots:
+
+                    tags_string = ''
+                    for tag in vmsnapshot["tags"]:
+                        tags_string = (
+                                tags_string +
+                                f'{tag["key"]}=\"{tag["value"]}\" ')
+
+                    # if tags_string != "":
+                    #     print(tags_string)
+
                     tmp_snapshots = tmp_snapshots + [({
                         "domain": vmsnapshot["domain"],
                         "project": vmsnapshot["project"],
@@ -151,7 +172,8 @@ def print_vm_snapshots(projectid=""):
                         "snapshot_name": vmsnapshot["name"],
                         "vm_or_vol_snappy": 'VM Snapshot',
                         "snapshot_state": vmsnapshot["state"],
-                        "created": vmsnapshot["created"]})]
+                        "created": vmsnapshot["created"],
+                        "tags": tags_string})]
     return tmp_snapshots
 
 
@@ -194,7 +216,7 @@ if not args.only_volume_snapshots:
 outputfile.write(
     'Domain;Projekt;VM Name;Volumename;Snapshot Name;'
     'VM or Volume Snapshot;State;Created;Physical Size;Intervaltype;'
-    'Revertable;Type\n')
+    'Revertable;Type;Tags\n')
 # pprint.pprint(all_snapshots)
 # pylint: disable=redefined-outer-name
 for snapshot in sorted(all_snapshots, key=lambda i: (
@@ -207,7 +229,8 @@ for snapshot in sorted(all_snapshots, key=lambda i: (
             f'{snapshot["vm_or_vol_snappy"]};'
             f'{snapshot["snapshot_state"]};{snapshot["created"]};'
             f'{snapshot["physicalsize"]};{snapshot["intervaltype"]};'
-            f'{snapshot["revertable"]};{snapshot["snapshottype"]}\n')
+            f'{snapshot["revertable"]};{snapshot["snapshottype"]};'
+            f'{snapshot["tags"]}\n')
     else:
         outputfile.write(
             f'{snapshot["domain"]};{snapshot["project"]};'
@@ -215,7 +238,7 @@ for snapshot in sorted(all_snapshots, key=lambda i: (
             f'{snapshot["snapshot_name"]};{snapshot["vm_or_vol_snappy"]};'
             f'{snapshot["snapshot_state"]};{snapshot["created"]};'
             f'n.a.;n.a.;'
-            f'n.a.;n.a.\n')
+            f'n.a.;n.a.;{snapshot["tags"]}\n')
 
 
 if args.name_outputfile is not None:
