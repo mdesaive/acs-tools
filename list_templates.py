@@ -103,7 +103,9 @@ def collect_templates(list_templatefilter, projectid=""):
 
                 tags_string = ''
                 for tag in template["tags"]:
-                    tags_string = tags_string + f'{tag["key"]}={tag["value"]} '
+                    tags_string = (
+                            tags_string +
+                            f'{tag["key"]}=\"{tag["value"]}\" ')
 
                 temp_templates = temp_templates + [{
                     "id": template["id"],
