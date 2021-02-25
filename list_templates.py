@@ -101,6 +101,9 @@ def collect_templates(list_templatefilter, projectid=""):
                     if key not in template:
                         template[key] = "n.a."
 
+                if isinstance(template["size"], int):
+                    template["size"] = round(template["size"]/1024**3, 2)
+
                 tags_string = ''
                 for tag in template["tags"]:
                     tags_string = (
@@ -179,7 +182,7 @@ for loop_template in sorted(all_templates, key=lambda i: (
 
 outputfile.write(
     'Domain;Project;Name;Displaytext;Templatetype;'
-    'Status;Size;Hypervisor;OSTypename;'
+    'Status;Size GB;Hypervisor;OSTypename;'
     'Format;Bootable;isDynamicallyScalable;isExtractable;isPublic;isReady;'
     'Passwordenabled;Tags\n')
 for loop_template in sorted(templates_condensed, key=lambda i: (

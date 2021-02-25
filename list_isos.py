@@ -133,7 +133,7 @@ def print_isos(filtered_isos, outputfile):
     filtered_isos = list(filtered_isos)
 
     output_string = (
-        'Domain;Project;Name;Displaytext;OS Type;Status;Size;' +
+        'Domain;Project;Name;Displaytext;OS Type;Status;Size MB;' +
         'Bootable;Dynamically Scalable;Extractable;Featured;' +
         'Public;Ready;Tags\n')
     outputfile.write(output_string)
@@ -145,7 +145,7 @@ def print_isos(filtered_isos, outputfile):
         output_string = (
             f'{isos["domain"]};{isos["project"]};'
             f'{isos["name"]};{isos["displaytext"]};{isos["ostypename"]};'
-            f'{isos["status"]};{isos["size"]};'
+            f'{isos["status"]};{round(isos["size"]/1024**2, 0)};'
             f'{isos["bootable"]};{isos["isdynamicallyscalable"]};'
             f'{isos["isextractable"]};{isos["isfeatured"]};{isos["ispublic"]};'
             f'{isos["isready"]};{isos["tags_string"]}')
