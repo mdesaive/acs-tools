@@ -3,7 +3,7 @@
 """ List CloudStack Volumes. """
 
 import sys
-# import pprint
+import pprint
 import argparse
 import textwrap
 from cs import CloudStack, read_config
@@ -83,7 +83,7 @@ def collect_volumes(cloudstack, projectid=""):
     if volumes_container != {}:
         volumes = volumes_container["volume"]
         for volume in volumes:
-            for key in ["project", "projectid", "diskofferingname", "vmname"]:
+            for key in ["project", "projectid", "diskofferingname", "vmname", "clustername", "storage", "path"]:
                 if key not in volume:
                     volume[key] = "n.a."
             if volume["domain"] == "ROOT":
@@ -117,7 +117,7 @@ def print_volumes(filtered_volumes, outputfile):
     filtered_volumes = list(filtered_volumes)
 
     output_string = (
-        'Domain;Project;VM Name;Cluster;Hypervisor;Storage;Name;' +
+        'Domain;Project;VM Name;Type;Cluster;Hypervisor;Storage;Name;' +
         'Size [GB];Diskoffering;Path\n')
     outputfile.write(output_string)
 
@@ -127,7 +127,7 @@ def print_volumes(filtered_volumes, outputfile):
             i["name"])):
         output_string = (
             f'{volumes["domain"]};{volumes["project"]};'
-            f'{volumes["vmname"]};{volumes["clustername"]};'
+            f'{volumes["vmname"]};{volumes["type"]};{volumes["clustername"]};'
             f'{volumes["hypervisor"]};'
             f'{volumes["storage"]};{volumes["name"]};'
             f'{int(volumes["size"]/1024**3)};{volumes["diskofferingname"]};'
