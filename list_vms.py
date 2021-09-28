@@ -4,7 +4,7 @@
 """ List CloudStack virtualmachines. """
 
 import sys
-# import pprint
+import pprint
 import argparse
 import textwrap
 from cs import CloudStack, read_config
@@ -150,7 +150,7 @@ def filter_vms(all_vms, args):
     return filtered_vms
 
 
-def print_vms(filtered_vms, args, outputfile):
+def print_vms(filtered_vms, args, outputfile, all_hosts, host_dict):
     """ Printout list of VMs."""
 
     filtered_vms = list(filtered_vms)
@@ -164,7 +164,7 @@ def print_vms(filtered_vms, args, outputfile):
                 max_nics = number_nics
 
     output_string = (
-            'Domain;Project;Name;Instancename;State;Hostname;CPUs;RAM [GB]')
+            'Domain;Project;Name;Instancename;State;Cluster;Hostname;CPUs;RAM [GB]')
     if args.with_total_volumes:
         output_string = output_string + ';Volumes Total [GB];Volumes Count'
     if args.with_networks:
@@ -180,7 +180,7 @@ def print_vms(filtered_vms, args, outputfile):
         output_string = (
             f'{vm["domain"]};{vm["project"]};{vm["name"]};'
             f'{vm["instancename"]};{vm["state"]};'
-            f'{vm["hostname"]};'
+            f'{host_dict[vm["hostname"]][1]};{vm["hostname"]};'
             f'{vm["cpunumber"]};{float(round(vm["memory"]/1024,1))}')
         if args.with_total_volumes:
             output_string = (
@@ -192,6 +192,26 @@ def print_vms(filtered_vms, args, outputfile):
                     output_string +
                     f';{nic["isdefault"]};{nic["networkname"]}')
         outputfile.write(f'{output_string}\n')
+
+
+def list_hosts(cs):
+    """ Creates listing of all hosts with info of cluster to add
+    cluster info to output."""
+    all_hosts = cs.listHosts(listall=True)["host"]
+    # pprint.pprint(all_hosts)
+
+    host_dict = {}
+
+    for item in all_hosts:
+        # pprint.pprint(item)
+        if item["type"] == "Routing":
+            host_dict[item["name"]] = [
+                    item["id"],
+                    item["clustername"]]
+    host_dict["n.a."] = ["n.a.", "n.a."]
+
+
+    return host_dict
 
 
 def main():
@@ -219,7 +239,9 @@ def main():
     # pprint.pprint(all_vms)
     filtered_vms = filter_vms(all_vms, args)
 
-    print_vms(filtered_vms, args, outputfile)
+    all_hosts = list_hosts(cs)
+    pprint.pprint(all_hosts)
+    print_vms(filtered_vms, args, outputfile, filtered_vms, all_hosts)
 
     if args.name_outputfile is not None:
         outputfile.close()
