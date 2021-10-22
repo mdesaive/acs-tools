@@ -3,7 +3,7 @@
 """ Create Report about Disk Performance. """
 
 import sys
-# import pprint
+import pprint
 import argparse
 import textwrap
 from cs import CloudStack, read_config
@@ -62,11 +62,11 @@ def collect_volumes(cloudstack, projectid=""):
     """ Collects all volumes for one project. """
 
     if projectid != "":
-        volumes_container = cloudstack.listVolumes(
+        volumes_container = cloudstack.listVolumesMetrics(
             listall=True,
             projectid=projectid)
     else:
-        volumes_container = cloudstack.listVolumes(listall=True)
+        volumes_container = cloudstack.listVolumesMetrics(listall=True)
 
     if volumes_container != {}:
         volumes = volumes_container["volume"]
@@ -78,7 +78,11 @@ def collect_volumes(cloudstack, projectid=""):
                     "vmname",
                     "clustername",
                     "storage",
-                    "path"]:
+                    "path",
+                    "diskioread",
+                    "diskiowrite",
+                    "diskkbsread",
+                    "diskkbswrite"]:
                 if key not in volume:
                     volume[key] = "n.a."
             if volume["domain"] == "ROOT":
@@ -99,9 +103,6 @@ def filter_volumes(all_volumes, args):
     if args.storage:
         filtered_volumes = filter(
             lambda d: d["storage"] == args.storage, filtered_volumes)
-    if args.only_detached:
-        filtered_volumes = filter(
-            lambda d: d["vmname"] == 'n.a.', filtered_volumes)
 
     return filtered_volumes
 
@@ -114,13 +115,15 @@ def print_volumes(filtered_volumes, outputfile):
     output_string = (
         'Domain;Project;VM Name;Type;Cluster;Hypervisor;Storage;Name;' +
         'Size [GB];Diskoffering;Path;' +
-        'diskiopstotal;diskioread;diskiowrite;diskkbsread;diskkbswrite\n')
+        'diskioread;diskiowrite;diskkbsread;diskkbswrite\n')
     outputfile.write(output_string)
 
+    pprint.pprint(filtered_volumes)
     for volumes in sorted(filtered_volumes, key=lambda i: (
             i["domain"],
             i["project"],
             i["name"])):
+        # pprint.pprint(volumes)
         output_string = (
             f'{volumes["domain"]};{volumes["project"]};'
             f'{volumes["vmname"]};{volumes["type"]};{volumes["clustername"]};'
@@ -128,7 +131,7 @@ def print_volumes(filtered_volumes, outputfile):
             f'{volumes["storage"]};{volumes["name"]};'
             f'{int(volumes["size"]/1024**3)};{volumes["diskofferingname"]};'
             f'{volumes["path"]};'
-            f'{volumes["diskiopstotal"]};{volumes["diskioread"]};'
+            f'{volumes["diskioread"]};'
             f'{volumes["diskiowrite"]};'
             f'{volumes["diskkbsread"]};{volumes["diskkbswrite"]}')
         outputfile.write(f'{output_string}\n')
