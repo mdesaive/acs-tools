@@ -11,28 +11,34 @@ from cs import CloudStack, read_config
 
 limit_data_list = [
         {
-            "id": 1,
+            "id": 0,
             "type": 'user_vm',
             "key_limit": 'vmlimit',
             "key_avail": 'vmavailable'
         },
         {
-            "id": 2,
+            "id": 1,
             "type": 'public_ip',
             "key_limit": 'iplimit',
             "key_avail": 'ipavailable'
         },
         {
-            "id": 3,
+            "id": 2,
             "type": 'volume',
             "key_limit": 'volumelimit',
             "key_avail": 'volumeavailable'
         },
         {
-            "id": 4,
+            "id": 3,
             "type": 'snapshot',
             "key_limit": 'snapshotlimit',
             "key_avail": 'snapshotavailable'
+        },
+        {
+            "id": 4,
+            "type": 'template',
+            "key_limit": 'templatelimit',
+            "key_avail": 'templateavailable'
         },
         # Project limits are not set in a project scope.
         # {
@@ -73,9 +79,9 @@ limit_data_list = [
         },
         {
             "id": 11,
-            "type": 'secondarystoragelimit',
-            "key_limit": 'secondarystorageavailable',
-            "key_avail": 'vmavailable'
+            "type": 'secondary_storage',
+            "key_limit": 'secondarystoragelimit',
+            "key_avail": 'secondarystorageavailable'
         }
     ]
 
@@ -153,26 +159,26 @@ def prepare_arguments():
     return args
 
 
-def manage_project_limits(project, print_csv, limit_matrix, outputfile):
+def manage_project_limits(cs, project, print_csv, limit_matrix, outputfile):
     """ Handle limits for one project. """
 
     if limit_matrix != []:
         limit_matrix_filtered = list(
                 filter(
-                    lambda limit: limit["project_id"] == project["id"],
+                    lambda limit: limit["uuid"] == project["id"],
                     limit_matrix))
         pprint.pprint(limit_matrix_filtered)
 
     if print_csv:
+        limit_string = (
+                f'{project["domain"]};{project["name"]};{project["id"]};')
         for limit_record in limit_data_list:
             if project[limit_record["key_limit"]] == "Unlimited":
                 limit = -1
             else:
                 limit = project[limit_record["key_limit"]]
-            outputfile.write(
-                f'{project["domain"]};{project["name"]};{project["id"]};' +
-                f'{limit_record["id"]};{limit_record["type"]};' +
-                f'{project[limit_record["key_avail"]]};{limit}\n')
+            limit_string += f'{limit};'
+        outputfile.write(limit_string + '\n')
 
     else:
         outputfile.write(
@@ -181,21 +187,44 @@ def manage_project_limits(project, print_csv, limit_matrix, outputfile):
 
         outputfile.write(
                 '-----------------------------------------------------------' +
-                '----\n')
+                '-------------------\n')
         outputfile.write(
-                f'| {"ID":3} | {"Name":23} | {"Current":>12} | {"Max":>12} |' +
+                f'| {"ID":3} | {"Name":23} | {"Utilization":>12} | ' +
+                f'{"Current Max":>12} | {"New Max":>12} |' +
                 '\n')
         outputfile.write(
                 '-----------------------------------------------------------' +
-                '----\n')
+                '-------------------\n')
         for limit_record in limit_data_list:
             outputfile.write(
                 f'| {limit_record["id"]:3} | {limit_record["type"]:23} | ' +
                 f'{project[limit_record["key_avail"]]:>12} | ' +
-                f'{project[limit_record["key_limit"]]:>12} |\n')
+                f'{project[limit_record["key_limit"]]:>12} | ' +
+                f'{limit_matrix_filtered[0][limit_record["key_limit"]]:>12} |\n')
         outputfile.write(
                 '-----------------------------------------------------------' +
-                '----\n')
+                '-------------------\n')
+
+        for limit_record in limit_data_list:
+            if project[limit_record["key_limit"]] != \
+                    limit_matrix_filtered[0][limit_record["key_limit"]]:
+                print(
+                    f'OK to change {limit_record["key_limit"]} from ' +
+                    f'{project[limit_record["key_limit"]]} to ' +
+                    f'{limit_matrix_filtered[0][limit_record["key_limit"]]}? (yes/no)')
+                answer = None
+                while answer not in ("yes", "no"):
+                    answer = input("Enter yes or no: ")
+                    if answer == "yes":
+                        print('Do change!')
+                        cs.updateResourceLimit(
+                                projectid=project["id"],
+                                resourcetype=limit_record["id"],
+                                max=limit_matrix_filtered[0][limit_record["key_limit"]])
+                    elif answer == "no":
+                        print('Not changing this limit.')
+                    else:
+                        print("Please enter yes or no.")
 
 
 def main():
@@ -207,32 +236,43 @@ def main():
     else:
         outputfile = sys.stdout
 
+    if args.set_from_filename and args.print_csv:
+        print('It is not advised to set from file and print output to CSV,')
+        sys.exit(1)
+
+    if args.read_from_filename and args.outputfile:
+        print('It does not make sense to read changes from file and print to file,')
+        sys.exit(1)
+
     # Reads ~/.cloudstack.ini
     cs = CloudStack(**read_config())
 
     # all_vms = collect_vms(cs, args.with_total_volumes)
 
     if args.print_csv:
-        outputfile.write(
-                'Domain;Project Name;Project UUID;Limit ID;Limit Name;' +
-                'Current Utilisation;Limit\n')
+        limit_string = 'Domain;Project Name;Project UUID;'
+        for limit_record in limit_data_list:
+            limit_string += f'{limit_record["type"]};'
+        outputfile.write(limit_string + '\n')
 
     projects_container = cs.listProjects(listall=True)
     projects = projects_container["project"]
 
     if args.set_from_filename:
-        tmp_limit_matrix = []
+        limit_matrix = []
         input_file = open(args.set_from_filename)
         for line in input_file:
             line_list = line.split(";")
-            tmp_limit_matrix.append(
-                    {
-                        "project_id": line_list[2],
-                        "limit_type": line_list[3],
-                        "limit_name": line_list[4],
-                        "new_limit": line_list[6]
-                    })
-        limit_matrix = tmp_limit_matrix
+            limit_record = {
+                        "domain": line_list[0],
+                        "project": line_list[1],
+                        "uuid": line_list[2],
+                    }
+            i = 3
+            for limit_data_record in sorted(limit_data_list, key=lambda key: key["id"]):
+                limit_record[limit_data_record["key_limit"]] = line_list[i]
+                i += 1
+            limit_matrix.append(limit_record)
     else:
         limit_matrix = []
 
@@ -255,8 +295,11 @@ def main():
     else:
         projects_filtered = projects
 
-    for project in sorted(projects_filtered, key=lambda key: key["name"]):
+    for project in sorted(projects_filtered, key=lambda key: (
+            key["domain"],
+            key["name"])):
         manage_project_limits(
+                cs,
                 project,
                 args.print_csv,
                 limit_matrix,
