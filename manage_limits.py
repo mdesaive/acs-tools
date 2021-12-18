@@ -4,7 +4,7 @@
 """ Manage Limits. """
 
 import sys
-import pprint
+# import pprint
 import argparse
 import textwrap
 from cs import CloudStack, read_config
@@ -122,54 +122,65 @@ def prepare_arguments():
         '''))
 
     parser.add_argument(
-        '--disable-limits',
-        dest='disable_limits',
-        help='Disable limits.',
+        '--set-limits',
+        dest='set_limits',
+        help='Set limits.',
         action='store_true',
         required=False)
     parser.add_argument(
-        '--force-disable',
-        dest='force-disable',
-        help='Disable limits without prompting for confirmation.',
+        '--print-limits',
+        dest='print_limits',
+        help='Print limits.',
         action='store_true',
         required=False)
+#     parser.add_argument(
+#         '--disable-limits',
+#         dest='disable_limits',
+#         help='Disable limits.',
+#         action='store_true',
+#         required=False)
+#     parser.add_argument(
+#         '--force-disable',
+#         dest='force-disable',
+#         help='Disable limits without prompting for confirmation.',
+#         action='store_true',
+#         required=False)
     parser.add_argument(
         '-p', '--project_id',
         dest='project_id',
         help='List only VMs of this project.',
         required=False)
     parser.add_argument(
-        '--print-csv',
-        dest='print_csv',
-        help='Print current configuration as CSV format (default is table).',
-        action='store_true',
-        required=False)
-    parser.add_argument(
         '-o', '--outputfile',
-        dest='name_outputfile',
+        dest='outputfile',
         help='Write output to file.',
         required=False)
     parser.add_argument(
-        '-s', '--set-from-file',
-        dest='set_from_filename',
-        help='Set limits from inputfile.',
+        '-i', '--inputfile',
+        dest='inputfile',
+        help='Read limits from file.',
         required=False)
     args = parser.parse_args()
 
     return args
 
 
-def manage_project_limits(cs, project, print_csv, limit_matrix, outputfile):
-    """ Handle limits for one project. """
+def print_limits(projects, name_outputfile):
+    """ Print current limit to CSV format. """
 
-    if limit_matrix != []:
-        limit_matrix_filtered = list(
-                filter(
-                    lambda limit: limit["uuid"] == project["id"],
-                    limit_matrix))
-        # pprint.pprint(limit_matrix_filtered)
+    if name_outputfile is not None:
+        outputfile = open(name_outputfile, 'w')
+    else:
+        outputfile = sys.stdout
 
-    if print_csv:
+    limit_string = 'Domain;Project Name;Project UUID;'
+    for limit_record in limit_data_list:
+        limit_string += f'{limit_record["type"]};'
+    outputfile.write(limit_string + '\n')
+
+    for project in sorted(projects, key=lambda key: (
+            key["domain"],
+            key["name"])):
         limit_string = (
                 f'{project["domain"]};{project["name"]};{project["id"]};')
         for limit_record in limit_data_list:
@@ -180,37 +191,73 @@ def manage_project_limits(cs, project, print_csv, limit_matrix, outputfile):
             limit_string += f'{limit};'
         outputfile.write(limit_string + '\n')
 
-    else:
-        outputfile.write(
-            f'\n\nLimits for domain: {project["domain"]} - ' +
-            f'project: {project["name"]}.\n')
 
-        outputfile.write(
+def prepare_limit_matrix(input_file_name):
+    """ Prepare the datastructure with limits to set."""
+    limit_matrix = []
+    input_file = open(input_file_name)
+    for line in input_file:
+        line_list = line.split(";")
+        limit_record = {
+                    "domain": line_list[0],
+                    "project": line_list[1],
+                    "uuid": line_list[2],
+                }
+        i = 3
+        for limit_data_record in sorted(
+                limit_data_list, key=lambda key: key["id"]):
+            limit_record[limit_data_record["key_limit"]] = line_list[i]
+            i += 1
+        limit_matrix.append(limit_record)
+    return limit_matrix
+
+
+def set_limits(cs, projects, limit_matrix):
+    """ Handle limits for one project. """
+
+    for project in sorted(projects, key=lambda key: (
+            key["domain"],
+            key["name"])):
+        project_id = project["id"]
+        if limit_matrix != []:
+            limit_matrix_filtered = list(
+                    filter(
+                        lambda lim, pid=project_id: lim["uuid"] == pid,
+                        limit_matrix))
+            # pprint.pprint(limit_matrix_filtered)
+
+        print(
+            f'\nLimits for domain: {project["domain"]} - ' +
+            f'project: {project["name"]}.')
+        print(
                 '-----------------------------------------------------------' +
-                '-------------------------\n')
-        outputfile.write(
+                '-------------------------')
+        print(
                 f'| {"ID":3} | {"Name":23} | {"Capacity Left":>14} | ' +
-                f'{"Old Max":>14} | {"New Max":>14} |' +
-                '\n')
-        outputfile.write(
+                f'{"Old Max":>14} | {"New Max":>14} |')
+        print(
                 '-----------------------------------------------------------' +
-                '-------------------------\n')
+                '-------------------------')
         for limit_record in limit_data_list:
             old_limit = project[limit_record["key_limit"]]
             if old_limit == 'Unlimited':
                 old_limit = '-1'
             new_limit = limit_matrix_filtered[0][limit_record["key_limit"]]
-
-            outputfile.write(
+            print(
                 f'| {limit_record["id"]:3} | {limit_record["type"]:23} | ' +
                 f'{project[limit_record["key_avail"]]:>14} | ' +
                 f'{old_limit:>14} | ' +
-                f'{new_limit:>14} |\n')
-        outputfile.write(
+                f'{new_limit:>14} |')
+        print(
                 '-----------------------------------------------------------' +
-                '-------------------------\n')
+                '-------------------------')
 
+        # pprint.pprint(limit_data_list)
         for limit_record in limit_data_list:
+            old_limit = project[limit_record["key_limit"]]
+            if old_limit == 'Unlimited':
+                old_limit = '-1'
+            new_limit = limit_matrix_filtered[0][limit_record["key_limit"]]
             if old_limit != new_limit:
                 print(
                     f'OK to change {limit_record["key_limit"]} from ' +
@@ -235,51 +282,22 @@ def main():
     """ main :) """
     args = prepare_arguments()
 
-    if args.name_outputfile is not None:
-        outputfile = open(args.name_outputfile, 'w')
-    else:
-        outputfile = sys.stdout
-
-    if args.set_from_filename and args.print_csv:
-        print('It is not advised to set from file and print output to CSV,')
+    if args.set_limits and args.print_limits:
+        print(
+                'Please use only one of the options ' +
+                '--print-limits --set-limits --disable-limits.')
         sys.exit(1)
-
-    if args.set_from_filename and args.name_outputfile:
-        print('It does not make sense to read changes from file and print to file,')
+    if not args.set_limits and not args.print_limits:
+        print(
+                'Please use one of the paramters ' +
+                '--print-limits --set-limits or --disable-limits.')
         sys.exit(1)
 
     # Reads ~/.cloudstack.ini
     cs = CloudStack(**read_config())
 
-    # all_vms = collect_vms(cs, args.with_total_volumes)
-
-    if args.print_csv:
-        limit_string = 'Domain;Project Name;Project UUID;'
-        for limit_record in limit_data_list:
-            limit_string += f'{limit_record["type"]};'
-        outputfile.write(limit_string + '\n')
-
     projects_container = cs.listProjects(listall=True)
     projects = projects_container["project"]
-
-    if args.set_from_filename:
-        limit_matrix = []
-        input_file = open(args.set_from_filename)
-        for line in input_file:
-            line_list = line.split(";")
-            limit_record = {
-                        "domain": line_list[0],
-                        "project": line_list[1],
-                        "uuid": line_list[2],
-                    }
-            i = 3
-            for limit_data_record in sorted(limit_data_list, key=lambda key: key["id"]):
-                limit_record[limit_data_record["key_limit"]] = line_list[i]
-                i += 1
-            limit_matrix.append(limit_record)
-    else:
-        limit_matrix = []
-
     if args.project_id:
         projects_filtered = list(
                 filter(
@@ -296,18 +314,15 @@ def main():
                     f'Domain: {project["domain"]}; ' +
                     f'Project Name: {project["name"]}; ' +
                     f'Project UUID: {project["id"]}')
+            sys.exit(1)
     else:
         projects_filtered = projects
 
-    for project in sorted(projects_filtered, key=lambda key: (
-            key["domain"],
-            key["name"])):
-        manage_project_limits(
-                cs,
-                project,
-                args.print_csv,
-                limit_matrix,
-                outputfile)
+    if args.print_limits:
+        print_limits(projects_filtered, args.outputfile)
+    if args.set_limits:
+        limit_matrix = prepare_limit_matrix(args.inputfile)
+        set_limits(cs, projects_filtered, limit_matrix)
 
 
 if __name__ == "__main__":
