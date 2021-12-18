@@ -145,7 +145,7 @@ def prepare_arguments():
         action='store_true',
         required=False)
     parser.add_argument(
-        '-o', '--outputfilie',
+        '-o', '--outputfile',
         dest='name_outputfile',
         help='Write output to file.',
         required=False)
@@ -167,7 +167,7 @@ def manage_project_limits(cs, project, print_csv, limit_matrix, outputfile):
                 filter(
                     lambda limit: limit["uuid"] == project["id"],
                     limit_matrix))
-        pprint.pprint(limit_matrix_filtered)
+        # pprint.pprint(limit_matrix_filtered)
 
     if print_csv:
         limit_string = (
@@ -187,31 +187,35 @@ def manage_project_limits(cs, project, print_csv, limit_matrix, outputfile):
 
         outputfile.write(
                 '-----------------------------------------------------------' +
-                '-------------------\n')
+                '-------------------------\n')
         outputfile.write(
-                f'| {"ID":3} | {"Name":23} | {"Utilization":>12} | ' +
-                f'{"Current Max":>12} | {"New Max":>12} |' +
+                f'| {"ID":3} | {"Name":23} | {"Capacity Left":>14} | ' +
+                f'{"Old Max":>14} | {"New Max":>14} |' +
                 '\n')
         outputfile.write(
                 '-----------------------------------------------------------' +
-                '-------------------\n')
+                '-------------------------\n')
         for limit_record in limit_data_list:
+            old_limit = project[limit_record["key_limit"]]
+            if old_limit == 'Unlimited':
+                old_limit = '-1'
+            new_limit = limit_matrix_filtered[0][limit_record["key_limit"]]
+
             outputfile.write(
                 f'| {limit_record["id"]:3} | {limit_record["type"]:23} | ' +
-                f'{project[limit_record["key_avail"]]:>12} | ' +
-                f'{project[limit_record["key_limit"]]:>12} | ' +
-                f'{limit_matrix_filtered[0][limit_record["key_limit"]]:>12} |\n')
+                f'{project[limit_record["key_avail"]]:>14} | ' +
+                f'{old_limit:>14} | ' +
+                f'{new_limit:>14} |\n')
         outputfile.write(
                 '-----------------------------------------------------------' +
-                '-------------------\n')
+                '-------------------------\n')
 
         for limit_record in limit_data_list:
-            if project[limit_record["key_limit"]] != \
-                    limit_matrix_filtered[0][limit_record["key_limit"]]:
+            if old_limit != new_limit:
                 print(
                     f'OK to change {limit_record["key_limit"]} from ' +
-                    f'{project[limit_record["key_limit"]]} to ' +
-                    f'{limit_matrix_filtered[0][limit_record["key_limit"]]}? (yes/no)')
+                    f'\"{old_limit}\" to ' +
+                    f'\"{new_limit}\"? (yes/no)')
                 answer = None
                 while answer not in ("yes", "no"):
                     answer = input("Enter yes or no: ")
@@ -220,7 +224,7 @@ def manage_project_limits(cs, project, print_csv, limit_matrix, outputfile):
                         cs.updateResourceLimit(
                                 projectid=project["id"],
                                 resourcetype=limit_record["id"],
-                                max=limit_matrix_filtered[0][limit_record["key_limit"]])
+                                max=new_limit)
                     elif answer == "no":
                         print('Not changing this limit.')
                     else:
@@ -240,7 +244,7 @@ def main():
         print('It is not advised to set from file and print output to CSV,')
         sys.exit(1)
 
-    if args.read_from_filename and args.outputfile:
+    if args.set_from_filename and args.name_outputfile:
         print('It does not make sense to read changes from file and print to file,')
         sys.exit(1)
 
