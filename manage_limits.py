@@ -243,7 +243,7 @@ def changes_pending(project, limit_matrix):
         if old_limit == 'Unlimited':
             old_limit = '-1'
         new_limit = limit_matrix[0][limit_record["key_limit"]]
-        if old_limit != new_limit:
+        if new_limit not in ('No Change', old_limit):
             return True
     return False
 
