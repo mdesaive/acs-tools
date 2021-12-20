@@ -133,18 +133,17 @@ def prepare_arguments():
         help='Print limits.',
         action='store_true',
         required=False)
-#     parser.add_argument(
-#         '--disable-limits',
-#         dest='disable_limits',
-#         help='Disable limits.',
-#         action='store_true',
-#         required=False)
-#     parser.add_argument(
-#         '--force-disable',
-#         dest='force-disable',
-#         help='Disable limits without prompting for confirmation.',
-#         action='store_true',
-#         required=False)
+    parser.add_argument(
+        '--disable-limits',
+        dest='disable_limits',
+        help='Disable limits.',
+        action='store_true',
+        required=False)
+    parser.add_argument(
+        '--disable-list',
+        dest='disable_list',
+        help='Disable list.',
+        required=False)
     parser.add_argument(
         '-p', '--project_id',
         dest='project_id',
@@ -212,6 +211,31 @@ def prepare_limit_matrix(input_file_name):
     return limit_matrix
 
 
+def prepare_disable_matrix(projects, disable_string):
+    """Prepares a list with IDs of limits to disable."""
+    disable_list = []
+    for i in disable_string.split(','):
+        disable_list.append(int(i))
+
+    disable_matrix = []
+    for project in projects:
+        limit_record = {
+                    "domain": project["domain"],
+                    "project": project["name"],
+                    "uuid": project["id"],
+                }
+        i = 3
+        for limit_data_record in sorted(
+                limit_data_list, key=lambda key: key["id"]):
+            if limit_data_record["id"] in disable_list:
+                limit_record[limit_data_record["key_limit"]] = '-1'
+            else:
+                limit_record[limit_data_record["key_limit"]] = "No Change"
+            i += 1
+        disable_matrix.append(limit_record)
+    return disable_matrix
+
+
 def set_limits(cs, projects, limit_matrix):
     """ Handle limits for one project. """
 
@@ -243,6 +267,8 @@ def set_limits(cs, projects, limit_matrix):
             if old_limit == 'Unlimited':
                 old_limit = '-1'
             new_limit = limit_matrix_filtered[0][limit_record["key_limit"]]
+            if old_limit == new_limit:
+                new_limit = "No Change"
             print(
                 f'| {limit_record["id"]:3} | {limit_record["type"]:23} | ' +
                 f'{project[limit_record["key_avail"]]:>14} | ' +
@@ -258,7 +284,7 @@ def set_limits(cs, projects, limit_matrix):
             if old_limit == 'Unlimited':
                 old_limit = '-1'
             new_limit = limit_matrix_filtered[0][limit_record["key_limit"]]
-            if old_limit != new_limit:
+            if new_limit not in (old_limit, 'No Change'):
                 print(
                     f'OK to change {limit_record["key_limit"]} from ' +
                     f'\"{old_limit}\" to ' +
@@ -287,11 +313,28 @@ def main():
                 'Please use only one of the options ' +
                 '--print-limits --set-limits --disable-limits.')
         sys.exit(1)
-    if not args.set_limits and not args.print_limits:
+    if not args.set_limits and not args.print_limits and \
+            not args.disable_limits:
         print(
                 'Please use one of the paramters ' +
                 '--print-limits --set-limits or --disable-limits.')
         sys.exit(1)
+    if args.disable_limits and not args.disable_list:
+        print(
+                'Please provide a list of limit types to disable.:\n' +
+                'e.g --disable-list=\"1,2,4,7\"\n' +
+                'Limit types are: \n' +
+                '     0 - Instance. Number of instances a user can create.\n' +
+                '     1 - IP. Number of public IP addresses.\n' +
+                '     2 - Volume. Number of disk volumes.\n' +
+                '     3 - Snapshot. Number of snapshots a user can create.\n' +
+                '     4 - Template. Number of templates.\n' +
+                '     6 - Network. Number of guest network.\n' +
+                '     7 - VPC. Number of VPC a user can create.\n' +
+                '     8 - CPU. Total number of CPU cores a user can use.\n' +
+                '     9 - Memory. Total Memory (in MB) a user can use.\n' +
+                '    10 - PrimaryStorage. Primary storage space (in GiB).\n' +
+                '    11 - SecondaryStorage.')
 
     # Reads ~/.cloudstack.ini
     cs = CloudStack(**read_config())
@@ -318,10 +361,17 @@ def main():
     else:
         projects_filtered = projects
 
+    project = projects_filtered
+
     if args.print_limits:
         print_limits(projects_filtered, args.outputfile)
     if args.set_limits:
         limit_matrix = prepare_limit_matrix(args.inputfile)
+        set_limits(cs, projects_filtered, limit_matrix)
+    if args.disable_limits:
+        limit_matrix = prepare_disable_matrix(
+                projects_filtered,
+                args.disable_list)
         set_limits(cs, projects_filtered, limit_matrix)
 
 
