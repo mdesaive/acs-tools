@@ -236,72 +236,96 @@ def prepare_disable_matrix(projects, disable_string):
     return disable_matrix
 
 
+def changes_pending(project, limit_matrix):
+    """Checks if there are changes pending for a given project."""
+    for limit_record in limit_data_list:
+        old_limit = project[limit_record["key_limit"]]
+        if old_limit == 'Unlimited':
+            old_limit = '-1'
+        new_limit = limit_matrix[0][limit_record["key_limit"]]
+        if old_limit != new_limit:
+            return True
+    return False
+
+
+def print_header(project, limit_matrix):
+    """Print header for one project."""
+    print(
+        f'\nLimits for domain: {project["domain"]} - ' +
+        f'project: {project["name"]}.')
+    print(
+            '-----------------------------------------------------------' +
+            '-------------------------')
+    print(
+            f'| {"ID":3} | {"Name":23} | {"Capacity Left":>14} | ' +
+            f'{"Old Max":>14} | {"New Max":>14} |')
+    print(
+            '-----------------------------------------------------------' +
+            '-------------------------')
+    for limit_record in limit_data_list:
+        old_limit = project[limit_record["key_limit"]]
+        if old_limit == 'Unlimited':
+            old_limit = '-1'
+        new_limit = limit_matrix[0][limit_record["key_limit"]]
+        if old_limit == new_limit:
+            new_limit = "No Change"
+        print(
+            f'| {limit_record["id"]:3} | {limit_record["type"]:23} | ' +
+            f'{project[limit_record["key_avail"]]:>14} | ' +
+            f'{old_limit:>14} | ' +
+            f'{new_limit:>14} |')
+    print(
+            '-----------------------------------------------------------' +
+            '-------------------------')
+
+
+def filter_limit_matrix(project, limit_matrix):
+    "Filter limits for one project."""
+    project_id = project["id"]
+    if limit_matrix != []:
+        limit_matrix_filtered = list(
+                filter(
+                    lambda lim, pid=project_id: lim["uuid"] == pid,
+                    limit_matrix))
+    return limit_matrix_filtered
+
+
+def update_limits(cs, project, limit_matrix_filtered):
+    """Update limits for one project"""
+    for limit_record in limit_data_list:
+        old_limit = project[limit_record["key_limit"]]
+        if old_limit == 'Unlimited':
+            old_limit = '-1'
+        new_limit = limit_matrix_filtered[0][limit_record["key_limit"]]
+        if new_limit not in (old_limit, 'No Change'):
+            cs.updateResourceLimit(
+                    projectid=project["id"],
+                    resourcetype=limit_record["id"],
+                    max=new_limit)
+
+
 def set_limits(cs, projects, limit_matrix):
     """ Handle limits for one project. """
-
     for project in sorted(projects, key=lambda key: (
             key["domain"],
             key["name"])):
-        project_id = project["id"]
-        if limit_matrix != []:
-            limit_matrix_filtered = list(
-                    filter(
-                        lambda lim, pid=project_id: lim["uuid"] == pid,
-                        limit_matrix))
-            # pprint.pprint(limit_matrix_filtered)
-
-        print(
-            f'\nLimits for domain: {project["domain"]} - ' +
-            f'project: {project["name"]}.')
-        print(
-                '-----------------------------------------------------------' +
-                '-------------------------')
-        print(
-                f'| {"ID":3} | {"Name":23} | {"Capacity Left":>14} | ' +
-                f'{"Old Max":>14} | {"New Max":>14} |')
-        print(
-                '-----------------------------------------------------------' +
-                '-------------------------')
-        for limit_record in limit_data_list:
-            old_limit = project[limit_record["key_limit"]]
-            if old_limit == 'Unlimited':
-                old_limit = '-1'
-            new_limit = limit_matrix_filtered[0][limit_record["key_limit"]]
-            if old_limit == new_limit:
-                new_limit = "No Change"
+        limit_matrix_filtered = filter_limit_matrix(project, limit_matrix)
+        # pprint.pprint(limit_matrix_filtered)
+        if changes_pending(project, limit_matrix_filtered):
+            print_header(project, limit_matrix_filtered)
             print(
-                f'| {limit_record["id"]:3} | {limit_record["type"]:23} | ' +
-                f'{project[limit_record["key_avail"]]:>14} | ' +
-                f'{old_limit:>14} | ' +
-                f'{new_limit:>14} |')
-        print(
-                '-----------------------------------------------------------' +
-                '-------------------------')
-
-        # pprint.pprint(limit_data_list)
-        for limit_record in limit_data_list:
-            old_limit = project[limit_record["key_limit"]]
-            if old_limit == 'Unlimited':
-                old_limit = '-1'
-            new_limit = limit_matrix_filtered[0][limit_record["key_limit"]]
-            if new_limit not in (old_limit, 'No Change'):
-                print(
-                    f'OK to change {limit_record["key_limit"]} from ' +
-                    f'\"{old_limit}\" to ' +
-                    f'\"{new_limit}\"? (yes/no)')
-                answer = None
-                while answer not in ("yes", "no"):
-                    answer = input("Enter yes or no: ")
-                    if answer == "yes":
-                        print('Do change!')
-                        cs.updateResourceLimit(
-                                projectid=project["id"],
-                                resourcetype=limit_record["id"],
-                                max=new_limit)
-                    elif answer == "no":
-                        print('Not changing this limit.')
-                    else:
-                        print("Please enter yes or no.")
+                'OK to change the above values? (yes/no)')
+            answer = None
+            while answer not in ("yes", "no"):
+                answer = input("Enter yes or no: ")
+                if answer == "yes":
+                    print('Do change!')
+                    # pprint.pprint(limit_data_list)
+                    update_limits(cs, project, limit_matrix_filtered)
+                elif answer == "no":
+                    print('Not changing this limit.')
+                else:
+                    print("Please enter yes or no.")
 
 
 def main():
