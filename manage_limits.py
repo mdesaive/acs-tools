@@ -93,21 +93,23 @@ def prepare_arguments():
         prog='list_systemvms.py',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent('''\
-        Create CSV list of all VMs for a CloudStack intance.
+        Manage CloudStack Limits. Retrieve actual settings and set.
 
         Autor: Melanie Desaive <m.desaive@mailbox.org>
         '''),
         epilog=textwrap.dedent('''\
         Examples:
 
-        List actual limits and manually change them
-            ./manage_limits.py
+        Write actual limits to "somefilename.csv".
+            python manage_limits.py --print-limits -o somefilename.csv
 
-        Manage limits for one project
-            ./manage_limits.py --project "Test von Melanie (Mauerpark)"
+        Disable limits for project
+            python manage_limits.py --disable-limits --disable-list="8,9" \
+                    --project="<UUID>"
 
         Disable limits for mentioned projects
-            ./manage_limits.py --disable-limits
+            python manage_limits.py --set-limits -i somefilename.csv \
+                    --project="<UUID>"
 
         Additional Infos:
 
@@ -359,6 +361,7 @@ def main():
                 '     9 - Memory. Total Memory (in MB) a user can use.\n' +
                 '    10 - PrimaryStorage. Primary storage space (in GiB).\n' +
                 '    11 - SecondaryStorage.')
+        sys.exit(1)
 
     # Reads ~/.cloudstack.ini
     cs = CloudStack(**read_config())
