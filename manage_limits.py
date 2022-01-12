@@ -104,11 +104,11 @@ def prepare_arguments():
             python manage_limits.py --print-limits -o somefilename.csv
 
         Disable limits for project
-            python manage_limits.py --disable-limits --disable-list="8,9" \
+            python manage_limits.py --disable-limits --disable-list="8,9" \\
                     --project="<UUID>"
 
         Disable limits for mentioned projects
-            python manage_limits.py --set-limits -i somefilename.csv \
+            python manage_limits.py --set-limits -i somefilename.csv \\
                     --project="<UUID>"
 
         Additional Infos:
